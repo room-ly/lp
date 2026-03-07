@@ -1,10 +1,20 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const APP_URL = "https://roomly.jp";
 const HP_URL = "https://hp.roomly.jp";
+const CONTACT_API = `${HP_URL}/api/contact`;
 
 function App() {
   const fadeRefs = useRef<(HTMLElement | null)[]>([]);
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    email: "",
+    company: "",
+    message: "",
+  });
+  const [contactStatus, setContactStatus] = useState<
+    "idle" | "sending" | "sent" | "error"
+  >("idle");
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -27,6 +37,26 @@ function App() {
 
   const setFadeRef = (index: number) => (el: HTMLElement | null) => {
     fadeRefs.current[index] = el;
+  };
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setContactStatus("sending");
+    try {
+      const res = await fetch(CONTACT_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...contactForm,
+          type: "LPからのお問い合わせ",
+        }),
+      });
+      if (!res.ok) throw new Error();
+      setContactStatus("sent");
+      setContactForm({ name: "", email: "", company: "", message: "" });
+    } catch {
+      setContactStatus("error");
+    }
   };
 
   return (
@@ -54,7 +84,7 @@ function App() {
           <p className="hero-sub">
             Roomlyなら、物件・契約・家賃・修繕をひとつの画面で管理できます。
             <br />
-            50区画まで無料。
+            10区画まで無料。
           </p>
           <a href={APP_URL} className="btn-cta">
             無料で始める
@@ -141,7 +171,7 @@ function App() {
                 ¥0<span>/月</span>
               </p>
               <p className="pricing-desc">
-                50区画まで無料。基本機能すべて使えます。
+                10区画まで無料。基本機能すべて使えます。
                 <br />
                 小規模な管理会社や、まず試してみたい方に。
               </p>
@@ -149,12 +179,12 @@ function App() {
             <div className="pricing-card">
               <p className="pricing-plan">スタンダード</p>
               <p className="pricing-price">
-                従量課金<span></span>
+                ¥5,000〜<span>/月</span>
               </p>
               <p className="pricing-desc">
-                区画数に応じた従量課金。
+                11区画から区画数に応じた従量課金。
                 <br />
-                詳細はお問い合わせください。
+                11〜50区画 ¥5,000/月、51〜100区画 ¥10,000/月〜
               </p>
             </div>
           </div>
@@ -163,6 +193,96 @@ function App() {
               まずは無料で試してみる
             </a>
           </div>
+        </div>
+      </section>
+
+      {/* お問い合わせフォーム */}
+      <section className="section section-alt" id="contact" ref={setFadeRef(6)}>
+        <div className="container fade-in" ref={setFadeRef(7)}>
+          <h2 className="section-title">お問い合わせ・資料請求</h2>
+          {contactStatus === "sent" ? (
+            <div className="contact-done">
+              <p className="contact-done-title">送信しました</p>
+              <p className="contact-done-desc">
+                お問い合わせありがとうございます。担当者より折り返しご連絡いたします。
+              </p>
+              <button
+                className="btn-cta-accent"
+                onClick={() => setContactStatus("idle")}
+              >
+                続けてお問い合わせする
+              </button>
+            </div>
+          ) : (
+            <form className="contact-form" onSubmit={handleContactSubmit}>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>
+                    お名前 <span className="required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={contactForm.name}
+                    onChange={(e) =>
+                      setContactForm({ ...contactForm, name: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="form-group">
+                  <label>会社名</label>
+                  <input
+                    type="text"
+                    value={contactForm.company}
+                    onChange={(e) =>
+                      setContactForm({
+                        ...contactForm,
+                        company: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>
+                  メールアドレス <span className="required">*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={contactForm.email}
+                  onChange={(e) =>
+                    setContactForm({ ...contactForm, email: e.target.value })
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  お問い合わせ内容 <span className="required">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={5}
+                  value={contactForm.message}
+                  onChange={(e) =>
+                    setContactForm({ ...contactForm, message: e.target.value })
+                  }
+                />
+              </div>
+              {contactStatus === "error" && (
+                <p className="form-error">
+                  送信に失敗しました。時間をおいて再度お試しください。
+                </p>
+              )}
+              <button
+                type="submit"
+                className="btn-cta-accent btn-submit"
+                disabled={contactStatus === "sending"}
+              >
+                {contactStatus === "sending" ? "送信中..." : "送信する"}
+              </button>
+            </form>
+          )}
         </div>
       </section>
 
